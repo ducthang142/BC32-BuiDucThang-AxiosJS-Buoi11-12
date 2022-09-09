@@ -1,13 +1,15 @@
 getUser();
 
-//Tạo mảng validateTaiKhoans để dùng cho validate trường hợp không dc đặt trùng tài khoản
+//Tạo mảng validateTaiKhoans để dùng cho validate trường hợp không dc đặt trùng tài khoản trước khi add user
+//Tạo mảng validateTaiKhoanEdits để dùng cho validate trường hợp không dc đặt trùng tài khoản trước khi edit user
 let validateTaiKhoans = [];
+let validateTaiKhoanEdits = [];
 
 //function getUser để lấy dữ liệu từ API
 function getUser() {
   apiGetUser()
     .then((response) => {
-      //Tạo mảng taiKhoans chỉ chứa các tài khoản rồi gán cho mảng validateTaiKhoans để kiểm tra trường hợp validate có trùng tài khoản ko 
+      //Tạo mảng taiKhoans chỉ chứa các tài khoản rồi gán cho mảng validateTaiKhoans để kiểm tra trường hợp validate có trùng tài khoản ko
       let taiKhoans = response.data.map((user) => {
         return user.taiKhoan;
       });
@@ -67,6 +69,12 @@ function deleteUser(userId) {
 
 // function updateUser request API để cập nhật người dùng
 function updateUser(userId, user) {
+  //Kiểm tra thông tin input có hợp lệ hay ko, nếu ko thì dừng hàm
+  let form = validateFormEdit();
+  if (!form) {
+    return;
+  }
+
   apiUpdateUser(userId, user)
     .then(() => {
       //Sau khi update xong thông tin gọi lại hàm getUser để hiển thị lại
@@ -138,6 +146,18 @@ dom("#btnThemNguoiDung").addEventListener("click", () => {
     <button class="btn btn-success" data-type="add">Thêm</button>
     `;
 
+  //Sửa lại input Tài khoản để thay đổi thuộc tính oninput thành validateTaiKhoan()
+  dom("#divTaiKhoan").innerHTML = `
+  <label>Tài khoản</label>
+  <input
+    id="TaiKhoan"
+    class="form-control"
+    placeholder="Nhập vào tài khoản"
+    oninput="validateTaiKhoan()"
+  />
+  <span id="spanTaiKhoan"></span>
+  `;
+
   //reset form
   resetForm();
 });
@@ -192,6 +212,19 @@ dom("#tblDanhSachNguoiDung").addEventListener("click", (evt) => {
   if (elType === "edit") {
     //Chỉnh sửa tiêu đề cho cập nhật
     dom(".modal-title").innerHTML = "Cập nhật người dùng";
+
+    //Sửa lại input Tài khoản để thay đổi thuộc tính oninput thành validateTaiKhoanEdit()
+    dom("#divTaiKhoan").innerHTML = `
+    <label>Tài khoản</label>
+    <input
+      id="TaiKhoan"
+      class="form-control"
+      placeholder="Nhập vào tài khoản"
+      oninput="validateTaiKhoanEdit()"
+    />
+    <span id="spanTaiKhoan"></span>
+    `;
+
     dom(".modal-footer").innerHTML = `
     <button class="btn btn-secondary" data-dismiss="modal">Hủy</button>
     <button class="btn btn-success" data-type="update">Cập nhật</button>
@@ -210,6 +243,11 @@ dom("#tblDanhSachNguoiDung").addEventListener("click", (evt) => {
         dom("#loaiNguoiDung").value = user.loaiND;
         dom("#loaiNgonNgu").value = user.ngonNgu;
         dom("#MoTa").value = user.moTa;
+
+        //Gán mảng validateTaiKhoanEdits bằng mảng validateTaiKhoans bỏ đi tài khoản của user dc nhấn nút "sửa" (edit)
+        validateTaiKhoanEdits = validateTaiKhoans.filter((taiKhoan) => {
+          return taiKhoan !== user.taiKhoan;
+        });
       })
       .catch((error) => {
         console.log(error);
@@ -218,8 +256,6 @@ dom("#tblDanhSachNguoiDung").addEventListener("click", (evt) => {
 });
 
 //===========================================================
-
-
 
 //Validation
 
@@ -246,6 +282,29 @@ function validateTaiKhoan() {
   return true;
 }
 
+//Hàm kiểm tra Tài khoản có hợp lệ hay ko
+function validateTaiKhoanEdit() {
+  //DOM
+  let taiKhoan = dom("#TaiKhoan").value;
+  let spanEl = dom("#spanTaiKhoan");
+  spanEl.style.color = "red";
+  //Xét trường hợp tài khoản có để trống hay ko
+  if (!taiKhoan) {
+    spanEl.innerHTML = "Tài khoản không được để trống";
+    return false;
+  }
+  //
+  for (let i = 0; i < validateTaiKhoanEdits.length; i++) {
+    if (taiKhoan === validateTaiKhoanEdits[i]) {
+      spanEl.innerHTML = "Tài khoản không được trùng nhau";
+      return false;
+    }
+  }
+
+  spanEl.innerHTML = "";
+  return true;
+}
+
 //Hàm kiểm tra Họ tên có hợp lệ hay ko
 function validateHoTen() {
   //DOM
@@ -253,15 +312,16 @@ function validateHoTen() {
   let spanEl = dom("#spanHoTen");
   spanEl.style.color = "red";
   //Kiểm tra xem Họ tên có để trống hay ko
-  if (!hoTen){
-    spanEl.innerHTML = "Họ tên không được để trống"
+  if (!hoTen) {
+    spanEl.innerHTML = "Họ tên không được để trống";
     return false;
   }
 
   //Kiểm tra trường hợp Họ tên chỉ bao gồm chữ ko chứa số và ký tự đặc biệt
-  let regex = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s|_]+$/;
-  if (!regex.test(hoTen)){
-    spanEl.innerHTML = "Họ tên chỉ bao gồm chữ cái"
+  let regex =
+    /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s|_]+$/;
+  if (!regex.test(hoTen)) {
+    spanEl.innerHTML = "Họ tên chỉ bao gồm chữ cái";
     return false;
   }
 
@@ -276,7 +336,7 @@ function validateMatKhau() {
   let spanEl = dom("#spanMatKhau");
   spanEl.style.color = "red";
 
-  //Kiểm tra xem Mật khẩu có để trống hay ko 
+  //Kiểm tra xem Mật khẩu có để trống hay ko
   if (!matKhau) {
     spanEl.innerHTML = "Mật khẩu không được để trống";
     return false;
@@ -290,8 +350,9 @@ function validateMatKhau() {
 
   //Kiểm tra Mật khẩu phải có ít nhất 1 kí tự in hoa, 1 kí tự đặc biệt, 1 kí số
   let regex = /(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9])/;
-  if (!regex.test(matKhau)){
-    spanEl.innerHTML = "Mật khẩu phải có ít nhất 1 kí tự hoa, 1 kí tự đặc biệt và 1 kí số"
+  if (!regex.test(matKhau)) {
+    spanEl.innerHTML =
+      "Mật khẩu phải có ít nhất 1 kí tự hoa, 1 kí tự đặc biệt và 1 kí số";
     return false;
   }
 
@@ -314,7 +375,7 @@ function validateEmail() {
 
   //Kiểm tra xem email có đúng format hay ko
   let regex = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
-  if(!regex.test(email)){
+  if (!regex.test(email)) {
     spanEl.innerHTML = "Email không đúng định dạng";
     return false;
   }
@@ -324,14 +385,14 @@ function validateEmail() {
 }
 
 //Hàm kiểm tra xem Hình ảnh có hợp lệ hay ko
-function validateHinhAnh(){
+function validateHinhAnh() {
   //DOM
   let hinhAnh = dom("#HinhAnh").value;
   let spanEl = dom("#spanHinhAnh");
   spanEl.style.color = "red";
 
   //Kiểm tra xem Hình ảnh có để trống hay ko
-  if (!hinhAnh){
+  if (!hinhAnh) {
     spanEl.innerHTML = "Hình ảnh không được để trống";
     return false;
   }
@@ -341,15 +402,15 @@ function validateHinhAnh(){
 }
 
 //Hàm kiểm tra xem Loại người dùng đã chọn hay chưa
-function validateLoaiND(){
+function validateLoaiND() {
   //DOM
   let loaiND = dom("#loaiNguoiDung").value;
   let spanEl = dom("#spanLoaiND");
   spanEl.style.color = "red";
 
   //Kiểm tra xem loại người dùng đã chọn chưa
-  if (!loaiND){
-    spanEl.innerHTML = "Hãy chọn loại người dùng"
+  if (!loaiND) {
+    spanEl.innerHTML = "Hãy chọn loại người dùng";
     return false;
   }
 
@@ -358,15 +419,15 @@ function validateLoaiND(){
 }
 
 //Hàm kiểm tra xem Loại ngôn ngữ đã chọn hay chưa
-function validateLoaiNN(){
+function validateLoaiNN() {
   //DOM
   let loaiNN = dom("#loaiNgonNgu").value;
   let spanEl = dom("#spanLoaiNN");
   spanEl.style.color = "red";
 
   //Kiểm tra xem Loại ngôn ngữ đã chọn chưa
-  if (!loaiNN){
-    spanEl.innerHTML = "Hãy chọn loại ngôn ngữ"
+  if (!loaiNN) {
+    spanEl.innerHTML = "Hãy chọn loại ngôn ngữ";
     return false;
   }
 
@@ -375,7 +436,7 @@ function validateLoaiNN(){
 }
 
 //Hàm kiểm tra xem Mô tả có hợp lệ hay ko
-function validateMoTa(){
+function validateMoTa() {
   //DOM
   let moTa = dom("#MoTa").value;
   let spanEl = dom("#spanMoTa");
@@ -397,10 +458,39 @@ function validateMoTa(){
   return true;
 }
 
-//Hàm kiểm tra form input có hợp lệ hay ko
+//Hàm kiểm tra form input có hợp lệ hay ko trước khi add user
 function validateForm() {
   let form = true;
-  form = validateTaiKhoan() & validateHoTen() & validateMatKhau() & validateEmail() & validateHinhAnh() & validateLoaiND() & validateLoaiNN() & validateMoTa();
+  form =
+    validateTaiKhoan() &
+    validateHoTen() &
+    validateMatKhau() &
+    validateEmail() &
+    validateHinhAnh() &
+    validateLoaiND() &
+    validateLoaiNN() &
+    validateMoTa();
+
+  if (!form) {
+    alert("Thông tin không hợp lệ");
+    return false;
+  }
+
+  return true;
+}
+
+//Hàm kiểm tra form input có hợp lệ hay ko trước khi edit user
+function validateFormEdit() {
+  let form = true;
+  form =
+    validateTaiKhoanEdit() &
+    validateHoTen() &
+    validateMatKhau() &
+    validateEmail() &
+    validateHinhAnh() &
+    validateLoaiND() &
+    validateLoaiNN() &
+    validateMoTa();
 
   if (!form) {
     alert("Thông tin không hợp lệ");
